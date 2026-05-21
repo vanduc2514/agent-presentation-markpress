@@ -38,6 +38,14 @@ All theme customization is done in `build.cjs` — edit the `FONTS`, `CUSTOM CSS
 
 See `.agents/skills/markpress-styling/SKILL.md` for the full reference — it covers colors, fonts, background, slide card rules, performance constraints, and per-slide overrides.
 
+### GitHub Badge — Required
+
+The `githubBadge` constant in `build.cjs` injects a fixed GitHub icon into every slide. **This icon must always be present.** When changing the visual theme:
+
+- You may change `.gh-badge` CSS (size, position, colors, opacity)
+- You must NOT remove the `githubBadge` const or its injection (`.replace('<body>', ...)`)
+- The `href` in `githubBadge` points to the presenter's GitHub profile — do not change it unless asked
+
 ## README Customization Guide
 
 When customizing this repository for a specific talk, update `README.md` to include:
