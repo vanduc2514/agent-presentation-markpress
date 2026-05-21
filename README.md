@@ -51,25 +51,11 @@ Edit the `<!--markpress-opt-->` block at the top of `slides/presentation.md`:
 markpress-opt-->
 ```
 
-### Change the color theme
+### Colors, fonts, and layout
 
-Edit the CSS variables at the top of the `customCss` block in `build.cjs`:
+All theming (color palette, fonts, slide positioning, CSS variables) is done in `build.cjs`.
 
-```js
-:root {
-  --accent: #4f46e5;   /* primary accent color */
-  --accent2: #059669;  /* secondary accent color */
-  --ink: #18181b;      /* main text color */
-}
-```
-
-### Change the font
-
-Replace the Google Fonts `<link>` and `font-family` values in `build.cjs`.
-
-### Slide layout
-
-Each slide position is set with `<!--slide-attr-->` comments. See `.agents/skills/markpress-styling/SKILL.md` for the full reference.
+See [`.agents/skills/markpress-styling/SKILL.md`](.agents/skills/markpress-styling/SKILL.md) for the full reference.
 
 ## GitHub Pages
 
@@ -80,10 +66,6 @@ Enable GitHub Pages in your repository:
 
 ## Writing Slides
 
-See `.agents/skills/markpress-content/SKILL.md` for the full guide.
+Slides are written in `slides/presentation.md` and separated by `------` (six dashes).
 
-Key rules:
-- Slides are separated by `------` (six dashes)
-- Keep slide content short and punchy
-- Speaker notes go in HTML comments `<!-- ... -->`
-- Content-heavy layout belongs in `build.cjs`, not inline HTML in the markdown
+See [`.agents/skills/markpress-content/SKILL.md`](.agents/skills/markpress-content/SKILL.md) for the full guide.
