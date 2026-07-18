@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
-  <rect width="180" height="180" fill="#f0ede8"/>
-  <text x="90" y="85" text-anchor="middle" font-family="Inter,sans-serif" font-size="14" fill="#52525b">QR Code</text>
-  <text x="90" y="105" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#a1a1aa">Replace with your QR</text>
-</svg>
