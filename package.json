@@ -1,17 +1,20 @@
 {
   "name": "presentation",
   "version": "1.0.0",
-  "description": "markpress impress.js presentation",
+  "description": "markpress impress.js presentation with multi-language support",
   "private": true,
   "scripts": {
     "build": "node build.cjs",
     "preview": "open output/index.html"
   },
   "devDependencies": {
+    "highlight.js": "^11.9.0",
+    "highlights": "1.4.1",
     "markpress": "^4.0.0"
   },
   "overrides": {
     "first-mate": "^7.4.3",
+    "highlights": "1.4.1",
     "oniguruma": "^7.2.3",
     "season": "^6.0.2"
   }
