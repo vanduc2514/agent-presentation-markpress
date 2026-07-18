@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#11111b">
+  <title>Presentation Remote</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #11111b;
+      --surface: #1e1e2e;
+      --border:  #313244;
+      --text:    #cdd6f4;
+      --sub:     #bac2de;
+      --muted:   #6c7086;
+      --accent:  #4f46e5;
+      --green:   #a6e3a1;
+      --yellow:  #f9e2af;
+      --red:     #f38ba8;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, "Inter", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    #connect-screen {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+      gap: 0.8rem;
+      text-align: center;
+    }
+
+    .logo { font-size: 1.6rem; font-weight: 200; letter-spacing: -0.04em; color: var(--text); margin-bottom: 0.2rem; }
+    .logo span { color: var(--accent); }
+    .subtitle { color: var(--muted); font-size: 0.84rem; margin-bottom: 0.6rem; }
+
+    .form-group { width: 100%; max-width: 320px; display: flex; flex-direction: column; }
+
+    #pw-input {
+      width: 100%;
+      padding: 0.7rem 0.9rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    #pw-input:focus { outline: none; border-color: var(--accent); }
+    #pw-input::placeholder { color: var(--muted); }
+
+    .btn-primary {
+      margin-top: 0.7rem;
+      padding: 0.7rem;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary:active { opacity: 0.78; }
+    .btn-primary:disabled { opacity: 0.45; cursor: default; }
+
+    #status-msg { font-size: 0.82rem; color: var(--yellow); min-height: 1.2em; }
+    #status-msg.error   { color: var(--red); }
+    #status-msg.success { color: var(--green); }
+
+    #control-screen { height: 100%; display: flex; flex-direction: column; }
+
+    #slide-header {
+      flex-shrink: 0; padding: 0.9rem 1.2rem 0.75rem;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    #slide-progress { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.25rem; }
+    #slide-title { font-size: 0.97rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    #next-slide-panel {
+      flex-shrink: 0; padding: 0.72rem 1.2rem 0.78rem;
+      background: rgba(79, 70, 229, 0.12);
+      border-top: 1px solid rgba(79, 70, 229, 0.34);
+      border-bottom: 1px solid rgba(79, 70, 229, 0.34);
+    }
+    #next-slide-label { font-size: 0.64rem; color: #c4b5fd; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.22rem; font-weight: 600; }
+    #next-slide-title { font-size: 0.9rem; color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    #progress-bar { flex-shrink: 0; height: 3px; background: var(--border); }
+    #progress-fill { height: 100%; background: var(--accent); transition: width 0.35s ease; }
+
+    #notes-area {
+      flex: 1; overflow-y: auto; padding: 1.2rem 1.2rem 0.8rem;
+      font-size: 0.9rem; line-height: 1.75; color: var(--sub); -webkit-overflow-scrolling: touch;
+    }
+    #notes-area p { margin-bottom: 0.75rem; }
+    #notes-area p:last-child { margin-bottom: 0; }
+    #notes-area.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.82rem; }
+
+    #nav-bar {
+      flex-shrink: 0; display: flex; border-top: 1px solid var(--border); background: var(--surface);
+    }
+    .nav-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 0.9rem 1rem; background: none; border: none; color: var(--text);
+      font-size: 1rem; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn:active { background: rgba(79,70,229,0.12); }
+    .nav-btn + .nav-btn { border-left: 1px solid var(--border); }
+    .nav-btn:disabled { color: var(--muted); opacity: 0.35; }
+    .nav-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; }
+
+    #disconnected-banner {
+      flex-shrink: 0; background: rgba(243, 139, 168, 0.12);
+      border-top: 1px solid rgba(243, 139, 168, 0.25);
+      color: var(--red); font-size: 0.78rem; text-align: center; padding: 0.55rem; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="connect-screen">
+    <div class="logo">Presentation <span>Remote</span></div>
+    <div class="subtitle">Enter the session password to connect</div>
+    <div class="form-group">
+      <input id="pw-input" type="password" placeholder="Session password" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button id="connect-btn" class="btn-primary">Connect</button>
+      <div id="status-msg"></div>
+    </div>
+  </div>
+
+  <div id="control-screen" style="display:none">
+    <div id="slide-header">
+      <div id="slide-progress">Slide &mdash; / &mdash;</div>
+      <div id="slide-title">Connecting&hellip;</div>
+    </div>
+    <div id="progress-bar"><div id="progress-fill" style="width:0%"></div></div>
+    <div id="notes-area" class="empty">No speaker notes for this slide.</div>
+    <div id="next-slide-panel">
+      <div id="next-slide-label">Up next</div>
+      <div id="next-slide-title">&mdash;</div>
+    </div>
+    <div id="nav-bar">
+      <button id="prev-btn" class="nav-btn" disabled><span>&#8592;</span><span class="nav-label">Prev</span></button>
+      <button id="next-btn" class="nav-btn"><span class="nav-label">Next</span><span>&#8594;</span></button>
+    </div>
+    <div id="disconnected-banner" style="display:none">Disconnected &mdash; tap to reconnect</div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var NTFY              = 'https://ntfy.sh';
+    var CMD_DEBOUNCE_MS   = 300;
+    var NO_PRESENTER_TIMEOUT_MS = 10000;
+
+    function toTopicIds(password) {
+      var data = new TextEncoder().encode('openclaw-rc-v1:' + password);
+      return crypto.subtle.digest('SHA-256', data).then(function (buf) {
+        var hex = Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+        var base = 'ocl-' + hex.slice(0, 32);
+        return { slide: base + '-s', remote: base + '-r' };
+      });
+    }
+
+    var pwInput            = document.getElementById('pw-input');
+    var connectBtn         = document.getElementById('connect-btn');
+    var statusMsg          = document.getElementById('status-msg');
+    var connectScreen      = document.getElementById('connect-screen');
+    var controlScreen      = document.getElementById('control-screen');
+    var slideProgress      = document.getElementById('slide-progress');
+    var slideTitle         = document.getElementById('slide-title');
+    var nextSlideTitle     = document.getElementById('next-slide-title');
+    var notesArea          = document.getElementById('notes-area');
+    var progressFill       = document.getElementById('progress-fill');
+    var prevBtn            = document.getElementById('prev-btn');
+    var nextBtn            = document.getElementById('next-btn');
+    var disconnectedBanner = document.getElementById('disconnected-banner');
+
+    var slideTopic   = null;
+    var remoteTopic  = null;
+    var slideSource  = null;
+    var connected    = false;
+    var lastCmdTime  = 0;
+    var noPresenterTimer = null;
+
+    var urlPw = new URLSearchParams(window.location.search).get('pw');
+    if (urlPw) { pwInput.value = urlPw; setTimeout(function () { connectBtn.click(); }, 400); }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function updateSlide(data) {
+      slideProgress.textContent = 'Slide ' + data.index + ' / ' + data.total;
+      slideTitle.textContent    = data.title || '(no title)';
+      nextSlideTitle.textContent = data.nextTitle || '(no title)';
+      progressFill.style.width  = ((data.index / data.total) * 100) + '%';
+
+      if (data.notes && data.notes.trim()) {
+        var html = data.notes.split(/\n\n+/).map(function (para) {
+          return '<p>' + escapeHtml(para) + '</p>';
+        }).join('');
+        notesArea.innerHTML = html;
+        notesArea.classList.remove('empty');
+      } else {
+        notesArea.innerHTML = 'No speaker notes for this slide.';
+        notesArea.classList.add('empty');
+      }
+    }
+
+    function setStatus(msg, type) {
+      statusMsg.textContent = msg;
+      statusMsg.className = type || '';
+    }
+
+    function requestSlide() {
+      if (!remoteTopic) return;
+      fetch(NTFY + '/' + remoteTopic, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ type: 'request_slide' }) }).catch(function () {});
+    }
+
+    function sendCmd(cmd, step) {
+      if (!remoteTopic) return;
+      var now = Date.now();
+      if (now - lastCmdTime < CMD_DEBOUNCE_MS) return;
+      lastCmdTime = now;
+      var msg = { type: 'cmd', cmd: cmd };
+      if (step) msg.step = step;
+      fetch(NTFY + '/' + remoteTopic, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(msg) }).catch(function () {});
+    }
+
+    function connect(password) {
+      connectBtn.disabled = true;
+      setStatus('Connecting\u2026', '');
+      if (slideSource) { slideSource.close(); slideSource = null; }
+      if (noPresenterTimer) { clearTimeout(noPresenterTimer); noPresenterTimer = null; }
+      connected = false;
+
+      toTopicIds(password).then(function (topics) {
+        slideTopic  = topics.slide;
+        remoteTopic = topics.remote;
+
+        slideSource = new EventSource(NTFY + '/' + slideTopic + '/sse');
+
+        slideSource.onopen = function () {
+          requestSlide();
+          if (connected) { disconnectedBanner.style.display = 'none'; }
+          else {
+            noPresenterTimer = setTimeout(function () {
+              if (!connected) {
+                setStatus('No presenter found \u2014 is the session running?', 'error');
+                connectBtn.disabled = false;
+              }
+            }, NO_PRESENTER_TIMEOUT_MS);
+          }
+        };
+
+        slideSource.addEventListener('message', function (e) {
+          var envelope, data;
+          try { envelope = JSON.parse(e.data); } catch (ex) { return; }
+          if (!envelope || envelope.event !== 'message') return;
+          try { data = JSON.parse(envelope.message); } catch (ex) { return; }
+          if (!data || data.type !== 'slide') return;
+
+          if (noPresenterTimer) { clearTimeout(noPresenterTimer); noPresenterTimer = null; }
+
+          if (!connected) {
+            connected = true;
+            connectScreen.style.display = 'none';
+            controlScreen.style.display = 'flex';
+          }
+
+          updateSlide(data);
+        });
+
+        slideSource.onerror = function () {
+          if (connected) { disconnectedBanner.style.display = 'block'; }
+          else { setStatus('Connection failed', 'error'); connectBtn.disabled = false; }
+        };
+      }).catch(function () {
+        setStatus('Connection failed', 'error');
+        connectBtn.disabled = false;
+      });
+    }
+
+    connectBtn.addEventListener('click', function () {
+      var pw = pwInput.value.trim();
+      if (!pw) { setStatus('Please enter a password', 'error'); return; }
+      connect(pw);
+    });
+
+    pwInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') connectBtn.click();
+    });
+
+    nextBtn.addEventListener('click', function () { sendCmd('next'); });
+    prevBtn.addEventListener('click', function () { sendCmd('prev'); });
+
+    disconnectedBanner.addEventListener('click', function () {
+      disconnectedBanner.style.display = 'none';
+      requestSlide();
+    });
+  })();
+  </script>
+</body>
+</html>
