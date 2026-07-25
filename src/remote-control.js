@@ -160,7 +160,7 @@
           var api = window.impress && window.impress();
           if (!api) return;
           var steps = Array.from(document.querySelectorAll('.step'));
-          var active = document.querySelector('.step.active');
+          var active = document.querySelector('.step.present, .step.active');
           var idx = active ? steps.indexOf(active) : -1;
           if (data.cmd === 'next' && idx >= 0 && idx < steps.length - 1) {
             api.goto(steps[idx + 1].id);

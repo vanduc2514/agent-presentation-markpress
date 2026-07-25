@@ -614,7 +614,7 @@ function buildPresentation(input, output, langSwitcher, pdfSuffix) {
     '<button class="slide-nav-btn" id="nav-home" type="button" title="Home">'
     + '${SVG_HOME}Home</button>'
     + '<button class="slide-nav-btn" id="nav-prev" type="button" title="Previous slide">'
-    + '${SVG_PREV}Prev</button>'
+    + '${SVG_PREV}Previous</button>'
     + '<button class="slide-nav-btn" id="nav-next" type="button" title="Next slide">'
     + 'Next${SVG_NEXT}</button>';
   document.body.appendChild(nav);
@@ -640,7 +640,7 @@ function buildPresentation(input, output, langSwitcher, pdfSuffix) {
 
   function currentStepIndex() {
     var steps = document.querySelectorAll('.step');
-    var active = document.querySelector('.step.active');
+    var active = document.querySelector('.step.present, .step.active');
     for (var i = 0; i < steps.length; i++) {
       if (steps[i] === active) return i;
     }
