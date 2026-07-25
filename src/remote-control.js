@@ -87,7 +87,7 @@
   }
 
   function toTopicIds(password) {
-    var data = new TextEncoder().encode('openclaw-rc-v1:' + password);
+    var data = new TextEncoder().encode('pres-rc-v1:' + password);
     return crypto.subtle.digest('SHA-256', data).then(function (buf) {
       var hex = Array.from(new Uint8Array(buf))
         .map(function (b) { return b.toString(16).padStart(2, '0'); })

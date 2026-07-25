@@ -5,4 +5,3 @@ This directory contains brainstorming notes, research, and planning materials fo
 ## Structure
 
 - `idea.md` — initial brainstorming and high-level thinking
-- `openclaw/` — per-group research files for OpenClaw optimization
