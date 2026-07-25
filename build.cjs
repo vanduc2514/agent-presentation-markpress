@@ -684,35 +684,39 @@ function buildPresentation(input, output, langSwitcher, pdfSuffix) {
 
 // ── Language switcher — preserve current slide ───────────
 (function() {
-  var switcher = document.getElementById('lang-switcher');
-  if (switcher) {
-    var origHref = switcher.getAttribute('href').split('?')[0];
-    switcher.addEventListener('click', function (e) {
-      e.preventDefault();
-      var steps = document.querySelectorAll('.step');
-      var active = document.querySelector('.step.present, .step.active');
-      var idx = 0;
-      for (var i = 0; i < steps.length; i++) {
-        if (steps[i] === active) { idx = i; break; }
-      }
-      window.location.href = origHref + '?slide=' + (idx + 1);
-    });
-  }
+  document.addEventListener('DOMContentLoaded', function () {
+    var switcher = document.getElementById('lang-switcher');
+    if (switcher) {
+      var origHref = switcher.getAttribute('href').split('?')[0];
+      switcher.addEventListener('click', function (e) {
+        e.preventDefault();
+        var steps = document.querySelectorAll('.step');
+        var active = document.querySelector('.step.present, .step.active');
+        var idx = 0;
+        for (var i = 0; i < steps.length; i++) {
+          if (steps[i] === active) { idx = i; break; }
+        }
+        window.location.href = origHref + '?slide=' + (idx + 1);
+      });
+    }
+  });
 
   // On page load, navigate to slide from query param
-  var slideParam = window.location.search.match(/[?&]slide=(\\d+)/);
-  if (slideParam) {
-    var target = parseInt(slideParam[1], 10) - 1;
-    window.addEventListener('load', function () {
-      setTimeout(function () {
-        var steps = document.querySelectorAll('.step');
-        if (target >= 0 && target < steps.length) {
-          var api = window.impress && window.impress();
-          if (api) api.goto(steps[target].id);
-        }
-      }, 300);
-    });
-  }
+  (function() {
+    var slideParam = window.location.search.match(/[?&]slide=(\\d+)/);
+    if (slideParam) {
+      var target = parseInt(slideParam[1], 10) - 1;
+      window.addEventListener('load', function () {
+        setTimeout(function () {
+          var steps = document.querySelectorAll('.step');
+          if (target >= 0 && target < steps.length) {
+            var api = window.impress && window.impress();
+            if (api) api.goto(steps[target].id);
+          }
+        }, 300);
+      });
+    }
+  })();
 })();
 
 // ── Image zoom modal ─────────────────────────────────────────
