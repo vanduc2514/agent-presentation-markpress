@@ -110,9 +110,9 @@
   font-family: "SF Mono", "Fira Code", monospace;
   cursor: pointer;
   text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+  word-break: break-all;
+  line-height: 1.4;
   transition: color 0.15s, border-color 0.15s;
 }
 #rc-url-btn:hover { color: #cba6f7; border-color: #4f46e5; }
