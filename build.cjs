@@ -700,7 +700,7 @@ function buildPresentation(input, output, langSwitcher, pdfSuffix) {
   }
 
   // On page load, navigate to slide from query param
-  var slideParam = window.location.search.match(/[?&]slide=(\d+)/);
+  var slideParam = window.location.search.match(/[?&]slide=(\\d+)/);
   if (slideParam) {
     var target = parseInt(slideParam[1], 10) - 1;
     window.addEventListener('load', function () {
