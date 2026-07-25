@@ -32,9 +32,19 @@ A mobile remote control is included. Open `output/remote.html` on any phone to c
 
 ## Git Commit Convention
 
-Format: `<scope>: <short description>`
+All commit messages **MUST** follow this format:
 
-Common scopes: `slide`, `visual`, `build`, `agent`, `project`
+> **`<scope>: <short description>`**
+
+Examples: `slide: add architecture diagram`, `build: update dependencies`, `agent: refine deployment instructions`
+
+| Scope | Definition |
+|---|---|
+| `slide` | Changes to slide content (`presentation.en.md`, `presentation.vi.md`) |
+| `visual` | Theme, styling, CSS, build.cjs visual changes |
+| `build` | Build configuration, scripts, dependencies |
+| `agent` | AI agent configuration, instructions, skills |
+| `project` | README, AGENTS.md, project setup, misc config |
 
 ## Presentation Content Rules
 
