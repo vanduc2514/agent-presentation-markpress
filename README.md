@@ -1,5 +1,7 @@
 # Presentation Template
 
+[![vi](https://img.shields.io/badge/lang-vi-yellow.svg)](README.vi-VN.md)
+
 A template for building **impress.js presentations** from Markdown — write slides in `.md`, get a self-contained HTML slideshow, and deploy to GitHub Pages automatically.
 
 Powered by [markpress](https://github.com/davidecaminati/markpress).
@@ -23,7 +25,8 @@ Requires Node.js 20. If you use [mise](https://mise.jdx.dev/), run `mise install
 
 ```
 slides/
-  presentation.md     # your slides source — edit this
+  presentation.en.md  # English slide source
+  presentation.vi.md  # Vietnamese slide source
   images/             # images referenced in slides
 build.cjs             # build script — customize theming here
 package.json
@@ -33,13 +36,15 @@ mise.toml             # Node.js version pin
     deploy-pages.yml  # auto-deploy to GitHub Pages on push to main
 .agents/
   skills/             # AI agent skills for writing and styling slides
+research/             # brainstorming notes and planning materials
+scripts/              # utility scripts (e.g., generate-pdf.cjs)
 ```
 
 ## Customizing
 
 ### Change the presentation title
 
-Edit the `<!--markpress-opt-->` block at the top of `slides/presentation.md`:
+Edit the `<!--markpress-opt-->` block at the top of `slides/presentation.en.md` (and the corresponding block in `slides/presentation.vi.md`):
 
 ```markdown
 <!--markpress-opt
@@ -66,6 +71,6 @@ Enable GitHub Pages in your repository:
 
 ## Writing Slides
 
-Slides are written in `slides/presentation.md` and separated by `------` (six dashes).
+Slides are written in `slides/presentation.en.md` (English) and `slides/presentation.vi.md` (Vietnamese), separated by `------` (six dashes).
 
 See [`.agents/skills/markpress-content/SKILL.md`](.agents/skills/markpress-content/SKILL.md) for the full guide.
