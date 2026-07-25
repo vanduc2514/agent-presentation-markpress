@@ -91,9 +91,7 @@ Replace sample.svg with your own image.
 
 # Thank You
 
-Any questions or just want to connect?
-
-Please reach out at:
+If you have any questions, feel free to reach out by scanning the QR below.
 
 | GitHub | Website |
 |---|---|

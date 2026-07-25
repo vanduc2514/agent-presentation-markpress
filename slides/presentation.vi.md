@@ -89,9 +89,7 @@ Thay thế sample.svg bằng hình ảnh của riêng bạn.
 
 # Xin cảm ơn
 
-Có câu hỏi nào hoặc muốn kết nối?
-
-Vui lòng liên hệ với tôi qua:
+Nếu có thắc mắc, vui lòng kết nối qua mã QR bên dưới.
 
 | GitHub | Website |
 |---|---|
