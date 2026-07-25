@@ -1,26 +1,17 @@
 #!/usr/bin/env python3
 """PreToolUse hook: validates git commit messages against the project convention.
 
-Convention (from AGENTS.md):
-  Format: <scope>: <short description>
-  Scopes: slide, visual, build, agent, project
-
-Triggered when the agent tries to commit via:
-  - run_in_terminal / send_to_terminal (command containing "git commit")
+Scopes are defined in ../scopes.json (single source of truth).
 """
 
 import json
 import re
 import sys
+from pathlib import Path
 
-# ── config ──────────────────────────────────────────────────────────────
-VALID_SCOPES = {
-    "slide":   "Changes to slide content (presentation.en.md, presentation.vi.md)",
-    "visual":  "Theme, styling, CSS, build.cjs visual changes",
-    "build":   "Build configuration, scripts, dependencies",
-    "agent":   "AI agent configuration, instructions, skills",
-    "project": "README, AGENTS.md, project setup, misc config",
-}
+# ── read scopes from canonical JSON file ─────────────────────────────────
+_SCOPES_JSON = Path(__file__).resolve().parent.parent / "scopes.json"
+VALID_SCOPES: dict[str, str] = json.loads(_SCOPES_JSON.read_text(encoding="utf-8"))
 SCOPE_PATTERN = re.compile(r"^(?P<scope>" + "|".join(VALID_SCOPES) + r"):\s+(?P<desc>.+)$")
 
 # ── helpers ─────────────────────────────────────────────────────────────
@@ -49,16 +40,17 @@ def extract_message(data: dict) -> str | None:
 def build_reminder(msg: str) -> str:
     """Build the additional context string."""
     scopes_list = "\n".join(
-        f"  - `{k}` — {v}" for k, v in VALID_SCOPES.items()
+        f"  - `{k}` - {v}" for k, v in VALID_SCOPES.items()
     )
-    return (
-        "REMINDER: Commit message does not follow the project convention "
-        "defined in AGENTS.md.\n\n"
-        "**Expected format:** `<scope>: <short description>`\n"
-        f"**Valid scopes:**\n{scopes_list}\n\n"
-        f'**Current message:** `"{msg}"`\n\n'
-        "Please adjust the commit message to match this convention before proceeding."
-    )
+    return f"""
+            REMINDER: Commit message does not follow the project convention
+            **Expected format:** `<scope>: <short description>`
+            **Valid scopes:**
+            {scopes_list}
+            **Current message:** `"{msg}"`
+
+            Please adjust the commit message to match this convention before proceeding.
+            """
 
 
 def main() -> None:

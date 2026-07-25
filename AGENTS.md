@@ -38,13 +38,7 @@ All commit messages **MUST** follow this format:
 
 Examples: `slide: add architecture diagram`, `build: update dependencies`, `agent: refine deployment instructions`
 
-| Scope | Definition |
-|---|---|
-| `slide` | Changes to slide content (`presentation.en.md`, `presentation.vi.md`) |
-| `visual` | Theme, styling, CSS, build.cjs visual changes |
-| `build` | Build configuration, scripts, dependencies |
-| `agent` | AI agent configuration, instructions, skills |
-| `project` | README, AGENTS.md, project setup, misc config |
+Scopes are defined in `.github/hooks/scopes.json`.
 
 ## Presentation Content Rules
 
