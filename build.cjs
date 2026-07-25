@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SYNTAX HIGHLIGHTING GUARD
@@ -39,12 +40,6 @@ const GTM_SCRIPT = `
     gtag('config', 'G-R8QY6LDP67');
   </script>
 `;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// REMOTE BASE URL
-// ─────────────────────────────────────────────────────────────────────────────
-const REMOTE_BASE_URL = process.env.REMOTE_BASE_URL ||
-  'https://vanduc2514.github.io/agent-presentation-markpress';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // REMOTE CONTROL ASSETS
@@ -352,6 +347,81 @@ const customCss = `
     .hljs-variable, .hljs-title { color: #e36209; }
     .hljs-punctuation { color: #586069; }
 
+    /* ── DOWNLOAD BUTTON ────────────────────────────────────────────────── */
+    .slide-download-link {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--line);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      color: var(--ink-dim);
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .slide-download-link:hover {
+      background: rgba(255, 255, 255, 0.98);
+      color: var(--ink);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .slide-download-link svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ── IMAGE ZOOM MODAL ──────────────────────────────────────────────── */
+    .img-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      justify-content: center;
+      align-items: center;
+      cursor: zoom-out;
+    }
+    .img-modal.open { display: flex; }
+    .img-modal img {
+      max-width: 90vw;
+      max-height: 90vh;
+      width: auto;
+      height: auto;
+      border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+      cursor: default;
+      border: 0;
+    }
+    .img-modal .close-btn {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: #fff;
+      font-size: 1.6rem;
+      line-height: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 150ms;
+    }
+    .img-modal .close-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
     /* ── GITHUB BADGE ───────────────────────────────────────────────────── */
     .gh-badge {
       position: fixed;
@@ -423,6 +493,15 @@ const customCss = `
 const SVG_HOME = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
 const SVG_PREV = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
 const SVG_NEXT = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PDF DOWNLOAD CONFIG
+// ─────────────────────────────────────────────────────────────────────────────
+const GIT_HASH = process.env.BUILD_GIT_SHA
+  ? process.env.BUILD_GIT_SHA.toString().trim().slice(0, 7)
+  : '';
+
+const SVG_DOWNLOAD = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LANGUAGE SWITCHER
@@ -506,7 +585,8 @@ function applyHighlighting(html) {
 // ─────────────────────────────────────────────────────────────────────────────
 // BUILD FUNCTION
 // ─────────────────────────────────────────────────────────────────────────────
-function buildPresentation(input, output, langSwitcher) {
+function buildPresentation(input, output, langSwitcher, pdfSuffix) {
+  const pdfFilename = `presentation${pdfSuffix ? '-' + pdfSuffix : ''}${GIT_HASH ? '-' + GIT_HASH : ''}.pdf`;
   return markpress(input, { theme: false }).then(({ html }) => {
     let stripped = html
       .replace(/<link[^>]+markpress[^>]*>/gi, '')
@@ -539,22 +619,52 @@ function buildPresentation(input, output, langSwitcher) {
     + 'Next${SVG_NEXT}</button>';
   document.body.appendChild(nav);
 
+  // Download PDF button
+  var downloadLink = document.createElement('a');
+  downloadLink.className = 'slide-download-link';
+  downloadLink.href = './${pdfFilename}';
+  downloadLink.download = '${pdfFilename}';
+  downloadLink.title = 'Download presentation as PDF';
+  downloadLink.setAttribute('aria-label', 'Download PDF');
+  downloadLink.innerHTML = '${SVG_DOWNLOAD}';
+  document.body.appendChild(downloadLink);
+
   var api = window.impress();
-  document.getElementById('nav-home').addEventListener('click', function () {
+
+  function goToStep(idx) {
     var steps = document.querySelectorAll('.step');
-    if (steps.length) api.goto(steps[0].id);
+    if (idx >= 0 && idx < steps.length) {
+      api.goto(steps[idx].id);
+    }
+  }
+
+  function currentStepIndex() {
+    var steps = document.querySelectorAll('.step');
+    var active = document.querySelector('.step.active');
+    for (var i = 0; i < steps.length; i++) {
+      if (steps[i] === active) return i;
+    }
+    return 0;
+  }
+
+  document.getElementById('nav-home').addEventListener('click', function () {
+    goToStep(0);
   });
   document.getElementById('nav-prev').addEventListener('click', function () {
-    api.prev();
+    goToStep(currentStepIndex() - 1);
   });
   document.getElementById('nav-next').addEventListener('click', function () {
-    api.next();
+    goToStep(currentStepIndex() + 1);
   });
 
+  // Disable impress.js built-in keyboard navigation by overriding next/prev
+  api.next = function(){};
+  api.prev = function(){};
+
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'ArrowLeft') { e.preventDefault(); api.prev(); }
-    else if (e.key === 'ArrowRight') { e.preventDefault(); api.next(); }
-    else if (e.key === 'Home') { e.preventDefault(); var steps = document.querySelectorAll('.step'); if (steps.length) api.goto(steps[0].id); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goToStep(currentStepIndex() - 1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); goToStep(currentStepIndex() + 1); }
+    else if (e.key === 'Home') { e.preventDefault(); goToStep(0); }
   });
 
   var _sx = 0, _sy = 0;
@@ -567,9 +677,49 @@ function buildPresentation(input, output, langSwitcher) {
     var dy = e.changedTouches[0].clientY - _sy;
     if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy)) {
       e.preventDefault();
-      if (dx > 0) api.prev(); else api.next();
+      if (dx > 0) goToStep(currentStepIndex() - 1); else goToStep(currentStepIndex() + 1);
     }
   }, { passive: false, capture: true });
+})();
+
+// ── Image zoom modal ─────────────────────────────────────────
+(function() {
+  var modal = document.createElement('div');
+  modal.className = 'img-modal';
+  modal.innerHTML =
+    '<button class="close-btn" type="button" aria-label="Close">&times;</button>'
+    + '<img alt="">';
+  document.body.appendChild(modal);
+
+  var modalImg = modal.querySelector('img');
+  var closeBtn = modal.querySelector('.close-btn');
+
+  function openModal(src) {
+    modalImg.src = src;
+    modal.classList.add('open');
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    modalImg.src = '';
+  }
+
+  document.querySelectorAll('.step img').forEach(function (img) {
+    img.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openModal(img.src);
+    });
+  });
+
+  modal.addEventListener('click', closeModal);
+  closeBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    closeModal();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
 })();
 </script>
 `;
@@ -581,7 +731,7 @@ function buildPresentation(input, output, langSwitcher) {
 
     const remoteScripts =
       '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>\n' +
-      `<script>\nvar __REMOTE_BASE__ = ${JSON.stringify(REMOTE_BASE_URL)};\n${REMOTE_CTRL_JS}\n</script>`;
+      `<script>\n${REMOTE_CTRL_JS}\n</script>`;
 
     const finalHtml = stripped
       .replace('<head>', `<head>\n${GTM_SCRIPT}\n${googleFonts}`)
@@ -591,6 +741,19 @@ function buildPresentation(input, output, langSwitcher) {
 
     fs.writeFileSync(output, finalHtml, 'utf8');
     console.log(`Built: ${output}`);
+
+    // ── Generate PDF ──────────────────────────────────────────────────────────
+    const htmlFilename = path.basename(output);
+    console.log(`Generating PDF: ${pdfFilename}…`);
+    try {
+      execFileSync('node', [path.join(__dirname, 'scripts', 'generate-pdf.cjs'), htmlFilename, pdfFilename], {
+        stdio: 'inherit',
+        cwd: __dirname,
+      });
+      console.log('PDF build complete:', pdfFilename);
+    } catch (pdfErr) {
+      console.warn('PDF generation skipped (Playwright not available):', pdfErr.message);
+    }
   });
 }
 
@@ -602,8 +765,8 @@ fs.writeFileSync(path.join(OUTPUT_DIR, 'remote.html'), REMOTE_HTML, 'utf8');
 console.log(`Built: ${path.join(OUTPUT_DIR, 'remote.html')}`);
 
 Promise.all([
-  buildPresentation(INPUT_EN, OUTPUT_EN, langSwitcherEn),
-  buildPresentation(INPUT_VI, OUTPUT_VI, langSwitcherVi),
+  buildPresentation(INPUT_EN, OUTPUT_EN, langSwitcherEn, 'en'),
+  buildPresentation(INPUT_VI, OUTPUT_VI, langSwitcherVi, 'vi'),
 ]).catch(err => {
   console.error('Build failed:', err);
   process.exit(1);

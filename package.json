@@ -10,7 +10,8 @@
   "devDependencies": {
     "highlight.js": "^11.9.0",
     "highlights": "1.4.1",
-    "markpress": "^4.0.0"
+    "markpress": "^4.0.0",
+    "playwright": "^1.61.1"
   },
   "overrides": {
     "first-mate": "^7.4.3",
