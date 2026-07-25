@@ -304,12 +304,12 @@
       if (e.key === 'Enter') connectBtn.click();
     });
 
-    nextBtn.addEventListener('click', function () { sendCmd('next'); });
     prevBtn.addEventListener('click', function () { sendCmd('prev'); });
+    nextBtn.addEventListener('click', function () { sendCmd('next'); });
 
     disconnectedBanner.addEventListener('click', function () {
       disconnectedBanner.style.display = 'none';
-      requestSlide();
+      if (remoteTopic) requestSlide();
     });
   })();
   </script>

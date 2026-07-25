@@ -7,7 +7,8 @@
  * captures screenshots, assembles them into an A4-landscape print HTML,
  * and converts it to PDF.
  *
- * Usage: node scripts/generate-pdf.cjs <html-filename> <pdf-filename>
+ * Usage: node generate-pdf.cjs <html-filename> <lang-suffix>
+ *   <lang-suffix> is e.g. 'en' or 'vi'
  * Pre-condition: `npm run build` must have run first.
  */
 
@@ -21,16 +22,22 @@ const path         = require('path');
 
 const PORT         = 4174;
 const BASE_URL     = `http://localhost:${PORT}`;
-const OUTPUT_DIR   = path.join(__dirname, '..', 'output');
+const OUTPUT_DIR   = path.join(__dirname, 'output');
 const NAV_TIMEOUT  = 10_000;
 
 const HTML_FILENAME = process.argv[2];
-const PDF_FILENAME  = process.argv[3];
+const LANG_SUFFIX   = process.argv[3] || '';
 
-if (!HTML_FILENAME || !PDF_FILENAME) {
-  console.error('Usage: node scripts/generate-pdf.cjs <html-filename> <pdf-filename>');
+if (!HTML_FILENAME) {
+  console.error('Usage: node generate-pdf.cjs <html-filename> <lang-suffix>');
   process.exit(1);
 }
+
+const GIT_HASH = process.env.BUILD_GIT_SHA
+  ? process.env.BUILD_GIT_SHA.toString().trim().slice(0, 7)
+  : '';
+
+const PDF_FILENAME = 'presentation' + (LANG_SUFFIX ? '-' + LANG_SUFFIX : '') + (GIT_HASH ? '-' + GIT_HASH : '') + '.pdf';
 
 const HTML_PATH  = path.join(OUTPUT_DIR, HTML_FILENAME);
 const PDF_OUT    = path.join(OUTPUT_DIR, PDF_FILENAME);
@@ -42,10 +49,10 @@ function sleep(ms) {
 }
 
 function installChromium() {
-  console.log('Playwright Chromium not found. Installing browser binary…');
+  console.log('Playwright Chromium not found. Installing browser binary\u2026');
   execFileSync('npx', ['playwright', 'install', 'chromium'], {
     stdio: 'inherit',
-    cwd: path.join(__dirname, '..'),
+    cwd: __dirname,
   });
 }
 
@@ -107,11 +114,11 @@ function startServer() {
 
 (async () => {
   if (!fs.existsSync(HTML_PATH)) {
-    console.error(`ERROR: ${HTML_PATH} not found. Run \`npm run build\` first.`);
+    console.error('ERROR: ' + HTML_PATH + ' not found. Run `npm run build` first.');
     process.exit(1);
   }
 
-  console.log(`Starting server on port ${PORT} for ${HTML_FILENAME}…`);
+  console.log('Starting server on port ' + PORT + ' for ' + HTML_FILENAME + '\u2026');
   const serverProcess = await startServer();
 
   const browser = await launchBrowser();
@@ -126,7 +133,7 @@ function startServer() {
     const page = await context.newPage();
 
     await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30_000 });
-    await page.waitForSelector('.impress-on', { timeout: NAV_TIMEOUT }).catch(() => {});
+    await page.waitForSelector('.impress-on', { timeout: NAV_TIMEOUT }).catch(function () {});
     await sleep(800);
 
     // Hide all interactive UI overlays — they must not appear in the PDF
@@ -135,89 +142,36 @@ function startServer() {
     });
 
     // Collect step IDs in presentation order
-    const stepIds = await page.evaluate(() =>
-      Array.from(document.querySelectorAll('.step')).map((s) => s.id)
-    );
+    const stepIds = await page.evaluate(function () {
+      return Array.from(document.querySelectorAll('.step')).map(function (s) { return s.id; });
+    });
 
     const screenshots = []; // base64 PNG strings
 
-    for (let i = 0; i < stepIds.length; i++) {
-      await page.evaluate((id) => window.impress().goto(id), stepIds[i]);
-      await sleep(700); // wait for transition to finish
+    for (var i = 0; i < stepIds.length; i++) {
+      await page.evaluate(function (id) { window.impress().goto(id); }, stepIds[i]);
+      await sleep(700);
 
-      const buf = await page.screenshot({ type: 'png' });
+      var buf = await page.screenshot({ type: 'png' });
       screenshots.push(buf.toString('base64'));
-      console.log(`  Captured slide ${i + 1}/${stepIds.length}: ${stepIds[i]}`);
+      console.log('  Captured slide ' + (i + 1) + '/' + stepIds.length + ': ' + stepIds[i]);
     }
 
     await context.close();
 
     // ── Build print HTML ──────────────────────────────────────────────────────
 
-    const totalPages = screenshots.length;
+    var totalPages = screenshots.length;
 
-    const pagesHtml = screenshots
-      .map(
-        (img, i) => `
-  <div class="pdf-page">
-    <img class="pdf-slide-img" src="data:image/png;base64,${img}" alt="Slide ${i + 1}">
-    <div class="pdf-footer">
-      <span class="pdf-repo-url">github.com/vanduc2514</span>
-      <span class="pdf-page-num">${i + 1} / ${totalPages}</span>
-    </div>
-  </div>`
-      )
-      .join('\n');
+    var pagesHtml = screenshots.map(function (img, i) {
+      return '\n  <div class="pdf-page">\n    <img class="pdf-slide-img" src="data:image/png;base64,' + img + '" alt="Slide ' + (i + 1) + '">\n    <div class="pdf-footer">\n      <span class="pdf-repo-url">github.com/vanduc2514</span>\n      <span class="pdf-page-num">' + (i + 1) + ' / ' + totalPages + '</span>\n    </div>\n  </div>';
+    }).join('\n');
 
-    const printHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-@page { size: A4 landscape; margin: 0; }
-body { background: white; font-family: "Space Grotesk", "Inter", "Segoe UI", sans-serif; }
-.pdf-page {
-  width: 297mm;
-  height: 210mm;
-  position: relative;
-  break-after: page;
-  overflow: hidden;
-  background: white;
-  display: flex;
-  flex-direction: column;
-}
-.pdf-page:last-child { break-after: auto; }
-.pdf-slide-img {
-  display: block;
-  width: 100%;
-  flex: 1;
-  object-fit: contain;
-  object-position: center;
-  min-height: 0;
-}
-.pdf-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 12px;
-  height: 22px;
-  flex-shrink: 0;
-  background: #f1f5f9;
-  border-top: 1px solid #e4e4e7;
-  font-size: 8pt;
-  color: #52525b;
-}
-</style>
-</head>
-<body>
-${pagesHtml}
-</body>
-</html>`;
+    var printHtml = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<style>\n* { margin: 0; padding: 0; box-sizing: border-box; }\n@page { size: A4 landscape; margin: 0; }\nbody { background: white; font-family: "Space Grotesk", "Inter", "Segoe UI", sans-serif; }\n.pdf-page {\n  width: 297mm;\n  height: 210mm;\n  position: relative;\n  break-after: page;\n  overflow: hidden;\n  background: white;\n  display: flex;\n  flex-direction: column;\n}\n.pdf-page:last-child { break-after: auto; }\n.pdf-slide-img {\n  display: block;\n  width: 100%;\n  flex: 1;\n  object-fit: contain;\n  object-position: center;\n  min-height: 0;\n}\n.pdf-footer {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  padding: 0 12px;\n  height: 22px;\n  flex-shrink: 0;\n  background: #f1f5f9;\n  border-top: 1px solid #e4e4e7;\n  font-size: 8pt;\n  color: #52525b;\n}\n</style>\n</head>\n<body>\n' + pagesHtml + '\n</body>\n</html>';
 
     // ── Generate PDF ──────────────────────────────────────────────────────────
 
-    const printPage = await browser.newPage();
+    var printPage = await browser.newPage();
     await printPage.setContent(printHtml, { waitUntil: 'networkidle' });
     await sleep(500);
 
@@ -228,13 +182,13 @@ ${pagesHtml}
       printBackground: true,
     });
 
-    console.log(`PDF generated: ${PDF_OUT}`);
+    console.log('PDF generated: ' + PDF_OUT);
     await printPage.close();
   } finally {
     await browser.close();
     serverProcess.close();
   }
-})().catch((err) => {
+})().catch(function (err) {
   console.error('PDF generation failed:', err);
   process.exit(1);
 });

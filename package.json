@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "build": "node build.cjs",
+    "generate-pdf": "node generate-pdf.cjs index.html en && node generate-pdf.cjs index.vi.html vi",
     "preview": "open output/index.html"
   },
   "devDependencies": {
