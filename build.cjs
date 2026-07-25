@@ -682,42 +682,15 @@ function buildPresentation(input, output, langSwitcher, pdfSuffix) {
   }, { passive: false, capture: true });
 })();
 
-// ── Language switcher — preserve current slide ───────────
-(function() {
-  document.addEventListener('DOMContentLoaded', function () {
-    var switcher = document.getElementById('lang-switcher');
-    if (switcher) {
-      var origHref = switcher.getAttribute('href').split('?')[0];
-      switcher.addEventListener('click', function (e) {
-        e.preventDefault();
-        var steps = document.querySelectorAll('.step');
-        var active = document.querySelector('.step.present, .step.active');
-        var idx = 0;
-        for (var i = 0; i < steps.length; i++) {
-          if (steps[i] === active) { idx = i; break; }
-        }
-        window.location.href = origHref + '?slide=' + (idx + 1);
-      });
-    }
-  });
-
-  // On page load, navigate to slide from query param
-  (function() {
-    var slideParam = window.location.search.match(/[?&]slide=(\\d+)/);
-    if (slideParam) {
-      var target = parseInt(slideParam[1], 10) - 1;
-      window.addEventListener('load', function () {
-        setTimeout(function () {
-          var steps = document.querySelectorAll('.step');
-          if (target >= 0 && target < steps.length) {
-            var api = window.impress && window.impress();
-            if (api) api.goto(steps[target].id);
-          }
-        }, 300);
-      });
-    }
-  })();
-})();
+// ── Language switcher — preserve current slide via hash ──
+document.body.addEventListener('click', function (e) {
+  var switcher = e.target.closest('#lang-switcher');
+  if (!switcher) return;
+  e.preventDefault();
+  var active = document.querySelector('.step.present, .step.active');
+  var href = switcher.getAttribute('href').split('?')[0].split('#')[0];
+  window.location.href = href + '#/' + (active ? active.id : 'step-1');
+});
 
 // ── Image zoom modal ─────────────────────────────────────────
 (function() {
