@@ -21,8 +21,8 @@ Requires node 20 (pinned via `mise.toml`). Run `mise install` if switching envir
 
 | File | Language |
 |---|---|
-| `output/index.html` | Vietnamese (default) |
-| `output/index.en.html` | English |
+| `output/index.html` | English (default) |
+| `output/index.vi.html` | Vietnamese |
 
 Each file includes a floating language-switcher button linking to the other version.
 
