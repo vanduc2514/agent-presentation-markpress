@@ -97,9 +97,6 @@ const GIT_HASH = process.env.BUILD_GIT_SHA
   ? process.env.BUILD_GIT_SHA.toString().trim().slice(0, 7)
   : '';
 
-
-
-
 // ─────────────────────────────────────────────────────────────────────────────
 // POST-PROCESSING: SYNTAX HIGHLIGHTING
 // ─────────────────────────────────────────────────────────────────────────────
@@ -148,7 +145,7 @@ function buildPresentation(input, output, langSwitcherHtml, pdfSuffix) {
     stripped = applyHighlighting(stripped);
 
     // ── External CSS ──────────────────────────────────────────────────────
-    var cssLink = '<link rel="stylesheet" href="presentation/presentation.css">\n';
+    var cssLink = '<link rel="stylesheet" href="presentation.css">\n';
 
     // ── Remote control styles (injected inline — small, immediate) ────────
     var remoteCssTag = '<style id="rc-styles">\n' + REMOTE_CTRL_CSS + '\n</style>\n';
@@ -160,7 +157,7 @@ function buildPresentation(input, output, langSwitcherHtml, pdfSuffix) {
 
     // ── PDF filename script + presentation.js ─────────────────────────────
     var pdfScript = '<script>window.__PDF_FILENAME__="' + pdfFilename + '";</script>\n';
-    var jsScript = '<script src="presentation/presentation.js"></script>\n';
+    var jsScript = '<script src="presentation.js"></script>\n';
 
     // ── Assemble final HTML ───────────────────────────────────────────────
     var finalHtml = stripped
@@ -197,10 +194,9 @@ copyFile(REMOTE_HTML_FILE, path.join(OUTPUT_DIR, 'remote.html'));
 copyFile(REMOTE_CTRL_CSS_FILE, path.join(OUTPUT_DIR, 'remote-control.css'));
 copyFile(REMOTE_CTRL_JS_FILE, path.join(OUTPUT_DIR, 'remote-control.js'));
 
-// Copy presentation assets to subfolder
-var presOutDir = path.join(OUTPUT_DIR, 'presentation');
-copyFile(PRESENTATION_CSS_FILE, path.join(presOutDir, 'presentation.css'));
-copyFile(PRESENTATION_JS_FILE, path.join(presOutDir, 'presentation.js'));
+// Copy presentation assets to output root
+copyFile(PRESENTATION_CSS_FILE, path.join(OUTPUT_DIR, 'presentation.css'));
+copyFile(PRESENTATION_JS_FILE, path.join(OUTPUT_DIR, 'presentation.js'));
 
 Promise.all([
   buildPresentation(INPUT_EN, OUTPUT_EN, LANG_SWITCHER.en, 'en'),
