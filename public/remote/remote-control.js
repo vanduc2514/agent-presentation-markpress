@@ -10,235 +10,264 @@
  *   <base>-r  mobile publishes commands       → presenter subscribes
  */
 /* global QRCode */
-(function () {
-  'use strict';
+(() => {
+  "use strict";
 
-  var NTFY = 'https://ntfy.sh';
-  var MAX_NOTES = 2000;
+  const NTFY = "https://ntfy.sh";
+  const MAX_NOTES = 2000;
 
-  var overlay = document.createElement('div');
-  overlay.id = 'rc-overlay';
-  overlay.innerHTML =
-    '<div id="rc-modal">' +
-      '<button id="rc-close-btn" title="Close">&#x2715;</button>' +
-      '<div id="rc-modal-title">Remote Control</div>' +
-      '<div id="rc-setup-panel">' +
-        '<label for="rc-pw-input">Session Password</label>' +
-        '<input id="rc-pw-input" type="password" placeholder="Choose a password\u2026" autocomplete="off">' +
-        '<div id="rc-setup-error" style="display:none"></div>' +
-        '<button id="rc-start-btn">Start Remote Session</button>' +
-      '</div>' +
-      '<div id="rc-active-panel" style="display:none">' +
-        '<div id="rc-status">Waiting for connection\u2026</div>' +
-        '<div id="rc-qr-wrap">' +
-          '<div id="rc-qr-canvas"></div>' +
-          '<button id="rc-url-btn" title="Click to copy">\u2014</button>' +
-        '</div>' +
-        '<div id="rc-count">0 device(s) connected</div>' +
-        '<button id="rc-stop-btn">Stop Session</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(overlay);
+  const overlay = Object.assign(document.createElement("div"), {
+    id: "rc-overlay",
+    innerHTML: `
+      <div id="rc-modal">
+        <button id="rc-close-btn" title="Close">&#x2715;</button>
+        <div id="rc-modal-title">Remote Control</div>
+        <div id="rc-setup-panel">
+          <label for="rc-pw-input">Session Password</label>
+          <input id="rc-pw-input" type="password" placeholder="Choose a password\u2026" autocomplete="off">
+          <div id="rc-setup-error" style="display:none"></div>
+          <button id="rc-start-btn">Start Remote Session</button>
+        </div>
+        <div id="rc-active-panel" style="display:none">
+          <div id="rc-status">Waiting for connection\u2026</div>
+          <div id="rc-qr-wrap">
+            <div id="rc-qr-canvas"></div>
+            <button id="rc-url-btn" title="Click to copy">\u2014</button>
+          </div>
+          <div id="rc-count">0 device(s) connected</div>
+          <button id="rc-stop-btn">Stop Session</button>
+        </div>
+      </div>
+    `,
+  });
+  document.body.append(overlay);
 
-  var rcBtn = document.createElement('button');
-  rcBtn.id = 'rc-btn';
-  rcBtn.title = 'Remote Control';
-  rcBtn.textContent = 'Remote';
-  document.body.appendChild(rcBtn);
+  const rcBtn = Object.assign(document.createElement("button"), {
+    id: "rc-btn",
+    title: "Remote Control",
+    textContent: "Remote",
+  });
+  document.body.append(rcBtn);
 
-  var slideTopic  = null;
-  var remoteTopic = null;
-  var cmdSource   = null;
-  var notesMap    = {};
-  var remoteCount = 0;
+  let slideTopic = null;
+  let remoteTopic = null;
+  let cmdSource = null;
+  let notesMap = {};
+  let remoteCount = 0;
+  let onStepEnter = null;
 
-  function buildNotesMap() {
-    var result = {};
-    document.querySelectorAll('.step').forEach(function (step) {
-      var walker = document.createTreeWalker(step, NodeFilter.SHOW_COMMENT);
-      var node;
+  const buildNotesMap = () => {
+    const result = {};
+    document.querySelectorAll(".step").forEach((step) => {
+      const walker = document.createTreeWalker(step, NodeFilter.SHOW_COMMENT);
+      let node;
       while ((node = walker.nextNode())) {
-        var m = node.textContent.match(/\s*SPEAKER NOTES\s*([\s\S]*)/);
-        if (m) { result[step.id] = m[1].trim(); break; }
+        const m = node.textContent.match(/\s*SPEAKER NOTES\s*([\s\S]*)/);
+        if (m) {
+          result[step.id] = m[1].trim();
+          break;
+        }
       }
     });
     return result;
   }
 
-  function currentSlideInfo() {
-    var steps = Array.from(document.querySelectorAll('.step'));
-    var active = document.querySelector('.step.active');
+  const currentSlideInfo = () => {
+    const steps = [...document.querySelectorAll(".step")];
+    const active = document.querySelector(".step.active");
     if (!active) return null;
-    var activeIndex = steps.indexOf(active);
-    var nextStep = steps[(activeIndex + 1) % steps.length];
-    var titleEl = active.querySelector('h1, h2, h3');
-    var nextTitleEl = nextStep ? nextStep.querySelector('h1, h2, h3') : null;
-    var notes = notesMap[active.id] || '';
-    if (notes.length > MAX_NOTES) notes = notes.slice(0, MAX_NOTES) + '\u2026';
+    const activeIndex = steps.indexOf(active);
+    const nextStep = steps[(activeIndex + 1) % steps.length];
+    const titleEl = active.querySelector("h1, h2, h3");
+    const nextTitleEl = nextStep?.querySelector("h1, h2, h3") ?? null;
+    let notes = notesMap[active.id] || "";
+    if (notes.length > MAX_NOTES) notes = notes.slice(0, MAX_NOTES) + "\u2026";
     return {
-      type:  'slide',
-      id:    active.id,
+      type: "slide",
+      id: active.id,
       index: activeIndex + 1,
       total: steps.length,
-      title: titleEl ? titleEl.textContent.trim() : '',
-      nextTitle: nextTitleEl ? nextTitleEl.textContent.trim() : '',
-      notes: notes
+      title: titleEl?.textContent.trim() || "",
+      nextTitle: nextTitleEl?.textContent.trim() || "",
+      notes,
     };
   }
 
-  function toTopicIds(password) {
-    var data = new TextEncoder().encode('pres-rc-v1:' + password);
-    return crypto.subtle.digest('SHA-256', data).then(function (buf) {
-      var hex = Array.from(new Uint8Array(buf))
-        .map(function (b) { return b.toString(16).padStart(2, '0'); })
-        .join('');
-      var base = 'ocl-' + hex.slice(0, 32);
-      return { slide: base + '-s', remote: base + '-r' };
-    });
+  const toTopicIds = async (password) => {
+    const data = new TextEncoder().encode(`pres-rc-v1:${password}`);
+    const buf = await crypto.subtle.digest("SHA-256", data);
+    const hex = [...new Uint8Array(buf)]
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    const base = `ocl-${hex.slice(0, 32)}`;
+    return { slide: `${base}-s`, remote: `${base}-r` };
   }
 
-  function publish(topic, data) {
-    fetch(NTFY + '/' + topic, {
-      method:  'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body:    JSON.stringify(data)
-    }).catch(function () {});
-  }
+  const publish = (topic, data) => {
+    fetch(`${NTFY}/${topic}`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(data),
+    }).catch(() => {});
+  };
 
-  function broadcastSlide() {
+  const broadcastSlide = () => {
     if (!slideTopic) return;
-    var info = currentSlideInfo();
+    const info = currentSlideInfo();
     if (info) publish(slideTopic, info);
-  }
+  };
 
-  function setCount(n) {
+  const setCount = (n) => {
     remoteCount = n;
-    var countEl  = document.getElementById('rc-count');
-    var statusEl = document.getElementById('rc-status');
-    if (countEl)  countEl.textContent = n + ' device(s) connected';
+    const countEl = document.getElementById("rc-count");
+    const statusEl = document.getElementById("rc-status");
+    if (countEl) countEl.textContent = `${n} device(s) connected`;
     if (statusEl) {
       if (n > 0) {
-        statusEl.textContent = 'Connected \u2014 ' + n + ' device(s)';
-        statusEl.className   = 'rc-connected';
+        statusEl.textContent = `Connected \u2014 ${n} device(s)`;
+        statusEl.className = "rc-connected";
       } else {
-        statusEl.textContent = 'Waiting for connection\u2026';
-        statusEl.className   = '';
+        statusEl.textContent = "Waiting for connection\u2026";
+        statusEl.className = "";
       }
     }
-    rcBtn.classList.toggle('rc-active', n > 0);
-  }
+    rcBtn.classList.toggle("rc-active", n > 0);
+  };
 
-  function startSession(password) {
-    var errorEl = document.getElementById('rc-setup-error');
-    errorEl.style.display = 'none';
-    document.getElementById('rc-start-btn').disabled = true;
+  const startSession = async (password) => {
+    document.getElementById("rc-setup-error").style.display = "none";
+    document.getElementById("rc-start-btn").disabled = true;
 
-    toTopicIds(password).then(function (topics) {
-      slideTopic  = topics.slide;
-      remoteTopic = topics.remote;
+    const topics = await toTopicIds(password);
+    slideTopic = topics.slide;
+    remoteTopic = topics.remote;
 
-      if (cmdSource) { cmdSource.close(); cmdSource = null; }
+    if (cmdSource) {
+      cmdSource.close();
+      cmdSource = null;
+    }
 
-      cmdSource = new EventSource(NTFY + '/' + remoteTopic + '/sse');
-      cmdSource.onmessage = function (e) {
-        var envelope, data;
-        try { envelope = JSON.parse(e.data); } catch (ex) { return; }
-        if (!envelope || envelope.event !== 'message') return;
-        try { data = JSON.parse(envelope.message); } catch (ex) { return; }
-        if (!data || !data.type) return;
+    cmdSource = new EventSource(`${NTFY}/${remoteTopic}/sse`);
+    cmdSource.onmessage = (e) => {
+      let envelope, data;
+      try {
+        envelope = JSON.parse(e.data);
+      } catch {
+        return;
+      }
+      if (!envelope || envelope.event !== "message") return;
+      try {
+        data = JSON.parse(envelope.message);
+      } catch {
+        return;
+      }
+      if (!data?.type) return;
 
-        if (data.type === 'request_slide') {
-          broadcastSlide();
-          if (remoteCount === 0) {
-            setCount(1);
-            overlay.classList.remove('rc-open');
-          }
-          return;
-        }
-
-        if (data.type === 'cmd') {
-          var api = window.impress && window.impress();
-          if (!api) return;
-          var steps = Array.from(document.querySelectorAll('.step'));
-          var active = document.querySelector('.step.present, .step.active');
-          var idx = active ? steps.indexOf(active) : -1;
-          if (data.cmd === 'next' && idx >= 0 && idx < steps.length - 1) {
-            api.goto(steps[idx + 1].id);
-          }
-          else if (data.cmd === 'prev' && idx > 0) {
-            api.goto(steps[idx - 1].id);
-          }
-          else if (data.cmd === 'goto' && data.step) {
-            api.goto(data.step);
-          }
-          // Fallback broadcast in case impress:stepenter event didn't fire
-          setTimeout(broadcastSlide, 250);
-        }
-      };
-
-      document.getElementById('rc-setup-panel').style.display = 'none';
-      document.getElementById('rc-active-panel').style.display  = 'block';
-      document.getElementById('rc-start-btn').disabled = false;
-
-      var remoteUrl = new URL('./remote.html?pw=' + encodeURIComponent(password), window.location.href).href;
-
-      var qrEl = document.getElementById('rc-qr-canvas');
-      qrEl.innerHTML = '';
-      new QRCode(qrEl, {
-        text:         remoteUrl,
-        width:        160,
-        height:       160,
-        colorDark:    '#000000',
-        colorLight:   '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
-      });
-
-      var urlBtn = document.getElementById('rc-url-btn');
-      urlBtn.textContent = remoteUrl;
-      urlBtn.onclick = function () {
-        navigator.clipboard.writeText(remoteUrl).then(function () {
-          urlBtn.textContent = 'Copied!';
-          setTimeout(function () { urlBtn.textContent = remoteUrl; }, 1600);
-        });
-      };
-
-      document.addEventListener('impress:stepenter', function () {
+      if (data.type === "request_slide") {
         broadcastSlide();
-      });
+        if (remoteCount === 0) {
+          setCount(1);
+          overlay.classList.remove("rc-open");
+        }
+        return;
+      }
+
+      if (data.type === "cmd") {
+        const api = window.impress?.();
+        if (!api) return;
+        const steps = [...document.querySelectorAll(".step")];
+        const active = document.querySelector(".step.present, .step.active");
+        const idx = active ? steps.indexOf(active) : -1;
+        if (data.cmd === "next" && idx >= 0 && idx < steps.length - 1) {
+          api.goto(steps[idx + 1].id);
+        } else if (data.cmd === "prev" && idx > 0) {
+          api.goto(steps[idx - 1].id);
+        } else if (data.cmd === "goto" && data.step) {
+          api.goto(data.step);
+        }
+        // Fallback broadcast in case impress:stepenter event didn't fire
+        setTimeout(broadcastSlide, 250);
+      }
+    };
+
+    document.getElementById("rc-setup-panel").style.display = "none";
+    document.getElementById("rc-active-panel").style.display = "block";
+    document.getElementById("rc-start-btn").disabled = false;
+
+    const remoteUrl = new URL(
+      `./remote.html?pw=${encodeURIComponent(password)}`,
+      window.location.href,
+    ).href;
+
+    const qrEl = document.getElementById("rc-qr-canvas");
+    qrEl.innerHTML = "";
+    new QRCode(qrEl, {
+      text: remoteUrl,
+      width: 160,
+      height: 160,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M,
     });
+
+    const urlBtn = document.getElementById("rc-url-btn");
+    urlBtn.textContent = remoteUrl;
+    urlBtn.onclick = () => {
+      navigator.clipboard.writeText(remoteUrl).then(() => {
+        urlBtn.textContent = "Copied!";
+        setTimeout(() => {
+          urlBtn.textContent = remoteUrl;
+        }, 1600);
+      });
+    };
+
+    if (onStepEnter)
+      document.removeEventListener("impress:stepenter", onStepEnter);
+    onStepEnter = () => {
+      broadcastSlide();
+    };
+    document.addEventListener("impress:stepenter", onStepEnter);
   }
 
-  function stopSession() {
-    if (cmdSource) { cmdSource.close(); cmdSource = null; }
+  const stopSession = () => {
+    cmdSource?.close();
+    cmdSource = null;
+    if (onStepEnter) {
+      document.removeEventListener("impress:stepenter", onStepEnter);
+      onStepEnter = null;
+    }
     slideTopic = remoteTopic = null;
     setCount(0);
-    document.getElementById('rc-setup-panel').style.display = 'block';
-    document.getElementById('rc-active-panel').style.display  = 'none';
-    rcBtn.classList.remove('rc-active');
-  }
+    document.getElementById("rc-setup-panel").style.display = "block";
+    document.getElementById("rc-active-panel").style.display = "none";
+    rcBtn.classList.remove("rc-active");
+  };
 
-  rcBtn.addEventListener('click', function () {
+  rcBtn.addEventListener("click", () => {
     notesMap = buildNotesMap();
-    overlay.classList.add('rc-open');
+    overlay.classList.add("rc-open");
   });
 
-  document.getElementById('rc-close-btn').addEventListener('click', function () {
-    overlay.classList.remove('rc-open');
+  document.getElementById("rc-close-btn").addEventListener("click", () => {
+    overlay.classList.remove("rc-open");
   });
 
-  overlay.addEventListener('click', function (e) {
-    if (e.target === overlay) overlay.classList.remove('rc-open');
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.classList.remove("rc-open");
   });
 
-  document.getElementById('rc-start-btn').addEventListener('click', function () {
-    var pw = document.getElementById('rc-pw-input').value.trim();
-    if (!pw) { document.getElementById('rc-pw-input').focus(); return; }
+  document.getElementById("rc-start-btn").addEventListener("click", () => {
+    const pw = document.getElementById("rc-pw-input").value.trim();
+    if (!pw) {
+      document.getElementById("rc-pw-input").focus();
+      return;
+    }
     startSession(pw);
   });
 
-  document.getElementById('rc-pw-input').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') document.getElementById('rc-start-btn').click();
+  document.getElementById("rc-pw-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("rc-start-btn").click();
   });
 
-  document.getElementById('rc-stop-btn').addEventListener('click', stopSession);
+  document.getElementById("rc-stop-btn").addEventListener("click", stopSession);
 })();

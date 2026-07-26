@@ -1,14 +1,14 @@
-'use strict';
+"use strict";
 
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SYNTAX HIGHLIGHTING GUARD
 // Must run before requiring markpress. Patches highlightSync to prevent crashes
 // from grammar parsing failures in marky-markdown's bundled highlights.
 // ─────────────────────────────────────────────────────────────────────────────
-const Highlights = require('highlights');
+const Highlights = require("highlights");
 const _origHighlightSync = Highlights.prototype.highlightSync;
 Highlights.prototype.highlightSync = function (opts) {
   try {
@@ -18,36 +18,35 @@ Highlights.prototype.highlightSync = function (opts) {
   }
 };
 
-const hljs = require('highlight.js');
-const markpress = require('markpress');
+const hljs = require("highlight.js");
+const markpress = require("markpress");
 
-const INPUT_EN = path.resolve(__dirname, 'slides/presentation.en.md');
-const INPUT_VI = path.resolve(__dirname, 'slides/presentation.vi.md');
-const OUTPUT_DIR = path.resolve(__dirname, 'output');
-const OUTPUT_EN = path.resolve(OUTPUT_DIR, 'index.html');
-const OUTPUT_VI = path.resolve(OUTPUT_DIR, 'index.vi.html');
+const INPUT_EN = path.resolve(__dirname, "slides/presentation.en.md");
+const INPUT_VI = path.resolve(__dirname, "slides/presentation.vi.md");
+const OUTPUT_DIR = path.resolve(__dirname, "output");
+const OUTPUT_EN = path.resolve(OUTPUT_DIR, "index.html");
+const OUTPUT_VI = path.resolve(OUTPUT_DIR, "index.vi.html");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ASSET PATHS
 // ─────────────────────────────────────────────────────────────────────────────
-const PUBLIC_DIR = path.resolve(__dirname, 'public');
-const PRESENTATION_DIR = path.resolve(PUBLIC_DIR, 'presentation');
-const REMOTE_DIR = path.resolve(PUBLIC_DIR, 'remote');
+const PUBLIC_DIR = path.resolve(__dirname, "public");
+const PRESENTATION_DIR = path.resolve(PUBLIC_DIR, "presentation");
+const REMOTE_DIR = path.resolve(PUBLIC_DIR, "remote");
 
-const PRESENTATION_CSS_FILE = path.resolve(PRESENTATION_DIR, 'presentation.css');
-const PRESENTATION_JS_FILE = path.resolve(PRESENTATION_DIR, 'presentation.js');
-const REMOTE_CTRL_CSS_FILE = path.resolve(REMOTE_DIR, 'remote-control.css');
-const REMOTE_CTRL_JS_FILE = path.resolve(REMOTE_DIR, 'remote-control.js');
-const REMOTE_HTML_FILE = path.resolve(REMOTE_DIR, 'index.html');
+const PRESENTATION_CSS_FILE = path.resolve(
+  PRESENTATION_DIR,
+  "presentation.css",
+);
+const PRESENTATION_JS_FILE = path.resolve(PRESENTATION_DIR, "presentation.js");
+const REMOTE_CTRL_CSS_FILE = path.resolve(REMOTE_DIR, "remote-control.css");
+const REMOTE_CTRL_JS_FILE = path.resolve(REMOTE_DIR, "remote-control.js");
+const REMOTE_HTML_FILE = path.resolve(REMOTE_DIR, "index.html");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // READ ASSETS
 // ─────────────────────────────────────────────────────────────────────────────
-const PRESENTATION_CSS = fs.readFileSync(PRESENTATION_CSS_FILE, 'utf8');
-const PRESENTATION_JS = fs.readFileSync(PRESENTATION_JS_FILE, 'utf8');
-const REMOTE_CTRL_CSS = fs.readFileSync(REMOTE_CTRL_CSS_FILE, 'utf8');
-const REMOTE_CTRL_JS = fs.readFileSync(REMOTE_CTRL_JS_FILE, 'utf8');
-const REMOTE_HTML = fs.readFileSync(REMOTE_HTML_FILE, 'utf8');
+const REMOTE_CTRL_CSS = fs.readFileSync(REMOTE_CTRL_CSS_FILE, "utf8");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GOOGLE TAG MANAGER (GA4)
@@ -93,115 +92,132 @@ const LANG_SWITCHER = {
 // ─────────────────────────────────────────────────────────────────────────────
 // PDF DOWNLOAD CONFIG
 // ─────────────────────────────────────────────────────────────────────────────
-const GIT_HASH = process.env.BUILD_GIT_SHA
-  ? process.env.BUILD_GIT_SHA.toString().trim().slice(0, 7)
-  : '';
+const GIT_HASH = (process.env.BUILD_GIT_SHA || "").slice(0, 7);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST-PROCESSING: SYNTAX HIGHLIGHTING
 // ─────────────────────────────────────────────────────────────────────────────
-function applyHighlighting(html) {
+const applyHighlighting = (html) => {
   return html.replace(
     /<div class="highlight ([^"\s]+)"><pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre><\/div>/g,
     (match, lang, escapedCode) => {
       if (!lang) return match;
       const code = escapedCode
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&amp;/g, "&")
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'");
       try {
-        const result = hljs.highlight(code.trim(), { language: lang, ignoreIllegals: true });
+        const result = hljs.highlight(code.trim(), {
+          language: lang,
+          ignoreIllegals: true,
+        });
         return `<pre><code class="hljs language-${lang}">${result.value}</code></pre>`;
       } catch (e) {
         return `<pre><code class="hljs">${escapedCode}</code></pre>`;
       }
-    }
+    },
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BUILD FUNCTION
 // ─────────────────────────────────────────────────────────────────────────────
-function buildPresentation(input, output, langSwitcherHtml, pdfSuffix) {
-  var pdfFilename = 'presentation' + (pdfSuffix ? '-' + pdfSuffix : '') + (GIT_HASH ? '-' + GIT_HASH : '') + '.pdf';
-  return markpress(input, { theme: false }).then(function (_ref) {
-    var html = _ref.html;
+const buildPresentation = async (input, output, langSwitcherHtml, pdfSuffix) => {
+  const pdfFilename = getPdfFilename(pdfSuffix);
+  const { html } = await markpress(input, { theme: false });
 
-    var stripped = html
-      .replace(/<link[^>]+markpress[^>]*>/gi, '')
-      .replace(/<link[^>]+theme[^>]*>/gi, '')
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, function (match) {
-        if (/font-family|line-height|blockquote|pre\s*\{/.test(match)) return '';
-        return match;
-      });
+  let stripped = html
+    .replace(/<link[^>]+markpress[^>]*>/gi, "")
+    .replace(/<link[^>]+theme[^>]*>/gi, "")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, (match) => {
+      if (/font-family|line-height|blockquote|pre\s*\{/.test(match)) return "";
+      return match;
+    });
 
-    stripped = stripped.replace(
-      /(<div[^>]*id=["']impress["'][^>]*)(>)/,
-      '$1 data-transition-duration="200"$2'
+  stripped = stripped.replace(
+    /(<div[^>]*id=["']impress["'][^>]*)(>)/,
+    '$1 data-transition-duration="200"$2',
+  );
+
+  stripped = applyHighlighting(stripped);
+
+  // ── External CSS ──────────────────────────────────────────────────────
+  const cssLink = '<link rel="stylesheet" href="presentation.css">\n';
+
+  // ── Remote control styles (injected inline) ───────────────────────────
+  const remoteCssTag = `<style id="rc-styles">\n${REMOTE_CTRL_CSS}\n</style>\n`;
+
+  // ── Remote control scripts (CDN + local file) ─────────────────────────
+  const remoteScripts =
+    [
+      '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>',
+      '<script src="remote-control.js"></script>',
+    ].join("\n") + "\n";
+
+  // ── PDF filename script + presentation.js ─────────────────────────────
+  const pdfScript = `<script>window.__PDF_FILENAME__="${pdfFilename}";</script>\n`;
+  const jsScript = '<script src="presentation.js"></script>\n';
+
+  // ── Assemble final HTML ───────────────────────────────────────────────
+  const finalHtml = stripped
+    .replace("<head>", `<head>\n${GTM_HTML}\n${GOOGLE_FONTS_HTML}`)
+    .replace("</head>", `${cssLink}\n${remoteCssTag}\n</head>`)
+    .replace("<body>", `<body>\n${GITHUB_BADGE_HTML}`)
+    .replace("</body>", `${langSwitcherHtml}\n${remoteScripts}\n</body>`)
+    .replace(
+      "<script>impress().init();</script>",
+      `<script>impress().init();</script>\n${pdfScript}${jsScript}`,
     );
 
-    stripped = applyHighlighting(stripped);
-
-    // ── External CSS ──────────────────────────────────────────────────────
-    var cssLink = '<link rel="stylesheet" href="presentation.css">\n';
-
-    // ── Remote control styles (injected inline — small, immediate) ────────
-    var remoteCssTag = '<style id="rc-styles">\n' + REMOTE_CTRL_CSS + '\n</style>\n';
-
-    // ── Remote control scripts (CDN + local file) ─────────────────────────
-    var remoteScripts =
-      '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>\n'
-      + '<script src="remote-control.js"></script>\n';
-
-    // ── PDF filename script + presentation.js ─────────────────────────────
-    var pdfScript = '<script>window.__PDF_FILENAME__="' + pdfFilename + '";</script>\n';
-    var jsScript = '<script src="presentation.js"></script>\n';
-
-    // ── Assemble final HTML ───────────────────────────────────────────────
-    var finalHtml = stripped
-      .replace('<head>', '<head>\n' + GTM_HTML + '\n' + GOOGLE_FONTS_HTML)
-      .replace('</head>', cssLink + '\n' + remoteCssTag + '\n</head>')
-      .replace('<body>', '<body>\n' + GITHUB_BADGE_HTML)
-      .replace('</body>', langSwitcherHtml + '\n' + remoteScripts + '\n</body>')
-      .replace(
-        '<script>impress().init();</script>',
-        '<script>impress().init();</script>\n' + pdfScript + jsScript
-      );
-
-    fs.writeFileSync(output, finalHtml, 'utf8');
-    console.log('Built: ' + output);
-  });
+  fs.writeFileSync(output, finalHtml, "utf8");
+  console.log(`Built: ${output}`);
 }
+
+// ── Shared: PDF filename derivation ──────────────────────────────────
+const getPdfFilename = (suffix) => {
+  let name = "presentation";
+  if (suffix) name += `-${suffix}`;
+  if (GIT_HASH) name += `-${GIT_HASH}`;
+  return name + ".pdf";
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILITY: copy file
 // ─────────────────────────────────────────────────────────────────────────────
-function copyFile(src, dest) {
+const copyFile = (src, dest, content) => {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, fs.readFileSync(src, 'utf8'), 'utf8');
-  console.log('Copied: ' + dest);
+  fs.writeFileSync(dest, content || fs.readFileSync(src, "utf8"), "utf8");
+  console.log(`Copied: ${dest}`);
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RUN (only when called directly, not when required as a module)
+// ─────────────────────────────────────────────────────────────────────────────
+if (require.main === module) {
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+
+  // Copy remote control assets
+  copyFile(REMOTE_HTML_FILE, path.join(OUTPUT_DIR, "remote.html"));
+  copyFile(
+    REMOTE_CTRL_CSS_FILE,
+    path.join(OUTPUT_DIR, "remote-control.css"),
+    REMOTE_CTRL_CSS,
+  );
+  copyFile(REMOTE_CTRL_JS_FILE, path.join(OUTPUT_DIR, "remote-control.js"));
+
+  // Copy presentation assets to output root
+  copyFile(PRESENTATION_CSS_FILE, path.join(OUTPUT_DIR, "presentation.css"));
+  copyFile(PRESENTATION_JS_FILE, path.join(OUTPUT_DIR, "presentation.js"));
+
+  Promise.all([
+    buildPresentation(INPUT_EN, OUTPUT_EN, LANG_SWITCHER.en, "en"),
+    buildPresentation(INPUT_VI, OUTPUT_VI, LANG_SWITCHER.vi, "vi"),
+  ]).catch((err) => {
+    console.error("Build failed:", err);
+    process.exit(1);
+  });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// RUN
-// ─────────────────────────────────────────────────────────────────────────────
-fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-
-// Copy remote control assets
-copyFile(REMOTE_HTML_FILE, path.join(OUTPUT_DIR, 'remote.html'));
-copyFile(REMOTE_CTRL_CSS_FILE, path.join(OUTPUT_DIR, 'remote-control.css'));
-copyFile(REMOTE_CTRL_JS_FILE, path.join(OUTPUT_DIR, 'remote-control.js'));
-
-// Copy presentation assets to output root
-copyFile(PRESENTATION_CSS_FILE, path.join(OUTPUT_DIR, 'presentation.css'));
-copyFile(PRESENTATION_JS_FILE, path.join(OUTPUT_DIR, 'presentation.js'));
-
-Promise.all([
-  buildPresentation(INPUT_EN, OUTPUT_EN, LANG_SWITCHER.en, 'en'),
-  buildPresentation(INPUT_VI, OUTPUT_VI, LANG_SWITCHER.vi, 'vi'),
-]).catch(function (err) {
-  console.error('Build failed:', err);
-  process.exit(1);
-});
+module.exports = { getPdfFilename };
