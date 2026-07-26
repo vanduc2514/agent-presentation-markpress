@@ -2,6 +2,6 @@
   "slide": "Changes to slide content (presentation.en.md, presentation.vi.md)",
   "visual": "Theme, styling, CSS, build.cjs visual changes",
   "build": "Build configuration, scripts, dependencies",
-  "agent": "AI agent configuration, instructions, skills",
-  "project": "README, AGENTS.md, project setup, misc config"
+  "agent": "AI agent configuration, instructions, skills, AGENTS.md documentation for agent features",
+  "project": "Project scaffolding, gitignore, README, cleanup, and misc config"
 }
