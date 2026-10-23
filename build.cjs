@@ -67,7 +67,7 @@ const GTM_HTML = `
 const GOOGLE_FONTS_HTML = `
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,200..700;1,14..32,200..700&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,200..700;1,14..32,200..700&family=Spectral:wght@600;700&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
 `;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -122,6 +122,41 @@ const applyHighlighting = (html) => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST-PROCESSING: TWO-CARD LAYOUT FOR SLIDES WITH AN IMAGE
+// Wraps the slide text and its image paragraph in separate containers so they
+// render as two side-by-side cards.
+// ─────────────────────────────────────────────────────────────────────────────
+const IMAGE_PARAGRAPH = /<p>\s*<img\b[^>]*>\s*<\/p>/;
+
+const wrapImageSlides = (html) => {
+  return html
+    .split(/(?=<div class="step")/)
+    .map((chunk) => {
+      if (!chunk.startsWith('<div class="step"')) return chunk;
+
+      const openEnd = chunk.indexOf(">") + 1;
+      const openTag = chunk.slice(0, openEnd);
+      const body = chunk.slice(openEnd);
+
+      const closeAt = body.indexOf("</div>");
+      if (closeAt === -1) return chunk;
+
+      const inner = body.slice(0, closeAt);
+      const imageMatch = inner.match(IMAGE_PARAGRAPH);
+      if (!imageMatch) return chunk;
+
+      const imageHtml = imageMatch[0];
+      const copyHtml = inner.replace(imageHtml, "");
+
+      return (
+        `${openTag}<div class="step-copy">${copyHtml}</div>` +
+        `<div class="step-media">${imageHtml}</div>${body.slice(closeAt)}`
+      );
+    })
+    .join("");
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // BUILD FUNCTION
 // ─────────────────────────────────────────────────────────────────────────────
 const buildPresentation = async (input, output, langSwitcherHtml, pdfSuffix) => {
@@ -142,6 +177,7 @@ const buildPresentation = async (input, output, langSwitcherHtml, pdfSuffix) => 
   );
 
   stripped = applyHighlighting(stripped);
+  stripped = wrapImageSlides(stripped);
 
   // ── External CSS ──────────────────────────────────────────────────────
   const cssLink = '<link rel="stylesheet" href="presentation.css">\n';
